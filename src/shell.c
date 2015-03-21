@@ -15,6 +15,7 @@ typedef struct {
 	const char *desc;
 } cmdlist;
 
+
 void ls_command(int, char **);
 void man_command(int, char **);
 void cat_command(int, char **);
@@ -182,7 +183,42 @@ void test_command(int n, char *argv[]) {
         host_action(SYS_CLOSE, handle);
         return;
     }
-
+//-----------------------------------------------------------------------------
+    if( n > 1){
+	if(!strcmp( argv[1], "fib")){
+	    //Fibonacci 
+	    int i, previousA, previousB, SUM;
+	    previousA = -1;
+	    previousB = 1;
+	    for(i=0;i<42;i++){
+		SUM = previousA + previousB;
+		previousA = previousB;
+		previousB = SUM;
+		fio_printf(1,"the %dth fibonacci number is %d\n\r",i,SUM);
+	    }
+	}
+	else if(!strcmp( argv[1], "pri")){
+	    //prime
+	    int i, j, flag;
+	    for(i=1;i<101;i++){
+		flag = 0;
+		for(j=2;j<i;j++){
+		    if((i%j) == 0) flag = 1;
+		}
+		if(flag == 0) fio_printf(1,">>%d\n\r",i);
+	    }
+	}
+	else{
+	    //command list
+	    fio_printf(1,"test fib ----show the first 41 fibonacci number\n\r");
+	    fio_printf(1,"tese pri ----show the first 100 prime number\n\r");
+	}
+    }else{
+	//command list
+	fio_printf(1,"test fib ----show the first 41 fibonacci number\n\r");
+	fio_printf(1,"tese pri ----show the first 100 prime number\n\r");
+    }
+//-----------------------------------------------------------------------------
     host_action(SYS_CLOSE, handle);
 }
 
