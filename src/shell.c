@@ -27,6 +27,7 @@ void ps_command(int, char **);
 void host_command(int, char **);
 void help_command(int, char **);
 void host_command(int, char **);
+void log_command(int, char **);
 void mmtest_command(int, char **);
 void new_command(int, char **);
 void kill_command(int, char **);
@@ -45,6 +46,7 @@ cmdlist cl[]={
 	MKCL(help, "help"),
 	MKCL(new, "create a new task"),
 	MKCL(kill, "delete a task create by command:new"),
+	MKCL(log, "create a new task to record log"),
 	MKCL(test, "test new function"),
 	MKCL(, ""),
 };
@@ -184,10 +186,11 @@ void vTaskCode(void *pParameter){
 //new
 void new_command(int n,char *argv[]){
 	configASSERT(nTask < MaxTask-1);
-	int  ucParameterToPass = nTask=1; //amount of task
+	static int  ucParameterToPass ;
+	ucParameterToPass = nTask; //amount of task
 	const signed char str1[4] = "TASK";
 	const signed char * const str = str1;
-	xTaskCreate(vTaskCode, str, 128, (void*)&ucParameterToPass , tskIDLE_PRIORITY + 1, &xHandles[nTask]);
+	xTaskCreate(vTaskCode, str, 128, (void*)&ucParameterToPass , tskIDLE_PRIORITY , &xHandles[nTask]);
 	configASSERT(xHandles[nTask]);
 	nTask++;
 }
@@ -198,10 +201,56 @@ void kill_command(int n,char *argv[]){
 	vTaskDelete(xHandles[nTask]);
 	nTask--;	
 }
+//-----------------------------
+void log_rec(void *pParameter) {
+    int handle;
+    int error;
+    portTickType xLastWakeTime = xTaskGetTickCount();
+    const portTickType xFrequency = 200;
+
+    fio_printf(1, "\r\n");
+    
+    handle = host_action(SYS_SYSTEM, "mkdir -p output");
+    handle = host_action(SYS_SYSTEM, "touch output/syslog");
+    while(1){
+	vTaskDelayUntil(&xLastWakeTime, xFrequency); //LastWakeTime refresh
+    	handle = host_action(SYS_OPEN, "output/syslog", 8);
+    	if(handle == -1) {
+        	fio_printf(1, "Open file error!\n\r");
+        	return;
+    	}
+//--------
+	signed char buf[512];
+	char timeStamp[1024];
+	sprintf(timeStamp,"%lu ms\n", xLastWakeTime);
+	vTaskList(buf);
+	const char* header = "\nName	State   Priority  Stack  Num"
+			     "\n*******************************************\n";
+	error = host_action(SYS_WRITE, handle, (void *)timeStamp, strlen((const char*)timeStamp));
+	error = host_action(SYS_WRITE, handle, (void*)header, strlen(header));
+	error = host_action(SYS_WRITE, handle, (void *)buf, strlen((const char*)buf));
+
+    	if(error != 0) {
+        	fio_printf(1, "Write file error! Remain %d bytes didn't write in the file.\n\r", error);
+        	host_action(SYS_CLOSE, handle);
+        	return;
+    	}
+        host_action(SYS_CLOSE, handle);
+    }
+}
+//-----------------------------------------------------------------------------
+void log_command(int n,char *argv[]){
+	xTaskHandle xLogHandle;
+	const signed char str1[6] = "logger";
+	const signed char * const str = str1;
+	xTaskCreate(log_rec, str, 512, (void*)NULL , tskIDLE_PRIORITY , &xLogHandle);
+	configASSERT(xLogHandle);
+}
+//----------------------------
 //---------------------
 
 void test_command(int n, char *argv[]) {
-    int handle;
+    /*int handle;
     int error;
 
     fio_printf(1, "\r\n");
@@ -221,7 +270,7 @@ void test_command(int n, char *argv[]) {
         fio_printf(1, "Write file error! Remain %d bytes didn't write in the file.\n\r", error);
         host_action(SYS_CLOSE, handle);
         return;
-    }
+    }*/
 //-----------------------------------------------------------------------------
     if( n > 1){
 	if(!strcmp( argv[1], "fib")){
@@ -258,7 +307,7 @@ void test_command(int n, char *argv[]) {
 	fio_printf(1,"tese pri ----show the first 100 prime number\n\r");
     }
 //-----------------------------------------------------------------------------
-    host_action(SYS_CLOSE, handle);
+    //host_action(SYS_CLOSE, handle);
 }
 
 void _command(int n, char *argv[]){
