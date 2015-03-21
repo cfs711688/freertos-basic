@@ -198,8 +198,8 @@ void new_command(int n,char *argv[]){
 //kill
 void kill_command(int n,char *argv[]){
 	configASSERT(nTask>0);
-	vTaskDelete(xHandles[nTask]);
-	nTask--;	
+	nTask--;
+	vTaskDelete(xHandles[nTask]);	
 }
 //-----------------------------
 void log_rec(void *pParameter) {
