@@ -9,6 +9,10 @@
 #include "task.h"
 #include "host.h"
 
+#define MaxTask 20
+static int nTask = 0; 
+xTaskHandle xHandles[MaxTask];
+
 typedef struct {
 	const char *name;
 	cmdfunc *fptr;
@@ -24,6 +28,8 @@ void host_command(int, char **);
 void help_command(int, char **);
 void host_command(int, char **);
 void mmtest_command(int, char **);
+void new_command(int, char **);
+void kill_command(int, char **);
 void test_command(int, char **);
 void _command(int, char **);
 
@@ -37,6 +43,8 @@ cmdlist cl[]={
 	MKCL(host, "Run command on host"),
 	MKCL(mmtest, "heap memory allocation test"),
 	MKCL(help, "help"),
+	MKCL(new, "create a new task"),
+	MKCL(kill, "delete a task create by command:new"),
 	MKCL(test, "test new function"),
 	MKCL(, ""),
 };
@@ -160,6 +168,37 @@ void help_command(int n,char *argv[]){
 		fio_printf(1, "%s - %s\r\n", cl[i].name, cl[i].desc);
 	}
 }
+//--------------------
+//new task to do
+void vTaskCode(void *pParameter){
+	portTickType xLastWakeTime = xTaskGetTickCount();
+	const portTickType xFrequency = 200;
+	int num = *((int*)pParameter);
+
+	while(1){	
+	    vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	    fio_printf(1, "Task%d: I'm executed \\OwO/\r\n",num);
+	}
+	
+} 
+//new
+void new_command(int n,char *argv[]){
+	configASSERT(nTask < MaxTask-1);
+	int  ucParameterToPass = nTask=1; //amount of task
+	const signed char str1[4] = "TASK";
+	const signed char * const str = str1;
+	xTaskCreate(vTaskCode, str, 128, (void*)&ucParameterToPass , tskIDLE_PRIORITY + 1, &xHandles[nTask]);
+	configASSERT(xHandles[nTask]);
+	nTask++;
+}
+
+//kill
+void kill_command(int n,char *argv[]){
+	configASSERT(nTask>0);
+	vTaskDelete(xHandles[nTask]);
+	nTask--;	
+}
+//---------------------
 
 void test_command(int n, char *argv[]) {
     int handle;
